@@ -1,0 +1,19 @@
+{
+  "name": "purina-web-scraper",
+  "version": "1.0.0",
+  "description": "Scraping the Purina website for information about dog and cat breeds",
+  "main": "dist/index.js",
+  "author": "Joe Rybarczyk",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^18.2.1",
+    "puppeteer-cluster": "^0.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }
+}
