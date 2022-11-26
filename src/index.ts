@@ -55,11 +55,80 @@ const getBreedAttributes = async (page: Page) => {
           n.textContent?.toLowerCase().trim()
         ),
         div.$eval('.statsDef-content-list-item-value', (n) =>
-          n.textContent?.trim()
+          n.textContent?.replaceAll('\u2013', '-').trim()
         ),
       ]);
     })
   );
+};
+
+const splitGenderedAttribute = (attribute: string) => {
+  if (attribute.includes(',')) {
+    const [male, female] = attribute.split(',');
+    const formattedMale = male
+      .replace('Male - ', '')
+      .replace('Males - ', '')
+      .replace('Male: ', '')
+      .trim();
+    const formattedFemale = female
+      .replace('Female - ', '')
+      .replace('Females - ', '')
+      .replace('Female: ', '')
+      .trim();
+    return [formattedMale, formattedFemale];
+  } else if (attribute.includes(';')) {
+    const [male, female] = attribute.split(';');
+    const formattedMale = male
+      .replace('Male - ', '')
+      .replace('Males - ', '')
+      .replace('Male: ', '')
+      .trim();
+    const formattedFemale = female
+      .replace('Female - ', '')
+      .replace('Females - ', '')
+      .replace('Female: ', '')
+      .trim();
+    return [formattedMale, formattedFemale];
+  } else {
+    return ['', ''];
+  }
+};
+
+const formatBreedAttributes = (
+  entries: [string | undefined, string | undefined][]
+) => {
+  const formattedEntries = [];
+  for (const [key, value] of entries) {
+    if (key && value) {
+      switch (key) {
+        case 'height':
+          if (value.includes('Male') && value.includes('Female')) {
+            const [formattedMale, formattedFemale] =
+              splitGenderedAttribute(value);
+            formattedEntries.push(['heightMale', formattedMale]);
+            formattedEntries.push(['heightFemale', formattedFemale]);
+          } else {
+            formattedEntries.push(['heightMale', value]);
+            formattedEntries.push(['heightFemale', value]);
+          }
+          break;
+        case 'weight':
+          if (value.includes('Male') && value.includes('Female')) {
+            const [formattedMale, formattedFemale] =
+              splitGenderedAttribute(value);
+            formattedEntries.push(['weightMale', formattedMale]);
+            formattedEntries.push(['weightFemale', formattedFemale]);
+          } else {
+            formattedEntries.push(['weightMale', value]);
+            formattedEntries.push(['weightFemale', value]);
+          }
+          break;
+        default:
+          formattedEntries.push([key, value]);
+      }
+    }
+  }
+  return Object.fromEntries(formattedEntries);
 };
 
 const getBreedNameAndAttributes = async ({
@@ -74,13 +143,13 @@ const getBreedNameAndAttributes = async ({
     getBreedName(page),
     getBreedAttributes(page),
   ]);
+  const formattedAttributes = formatBreedAttributes(attributeEntries);
   console.log(`--> Got ${name} (${data.url})`);
   page.close();
   data.total.push({
     name: name,
-    ...Object.fromEntries(attributeEntries),
+    ...formattedAttributes,
   });
-  console.log(data.total);
 };
 
 const getBreedInfo = async (links: string[]) => {
@@ -160,24 +229,42 @@ const getDogBreeds = async (browser: Browser) => {
     JSON.stringify(dogBreedInfo),
     'utf-8'
   );
+  // const csv = toBreedCSV(dogBreedInfo, [
+  //   'name',
+  //   'size',
+  //   'height',
+  //   'weight',
+  //   'coat',
+  //   'color',
+  //   'energy',`
+  //   'activities',
+  // ]);
+  // fs.writeFileSync('./data/dog-breeds.csv', csv, 'utf-8');
+};
+
+// (async () => {
+//   console.log('Launching headless Chromium browser...');
+//   const browser = await puppeteer.launch();
+
+//   // await getCatBreeds(browser);
+//   await getDogBreeds(browser);
+//   process.exit();
+// })();
+
+(() => {
+  const rawJSON = fs.readFileSync('./data/dog-breeds.json', 'utf-8');
+  const dogBreedInfo = JSON.parse(rawJSON);
   const csv = toBreedCSV(dogBreedInfo, [
     'name',
     'size',
-    'height',
-    'weight',
+    'heightMale',
+    'heightFemale',
+    'weightMale',
+    'weightFemale',
     'coat',
     'color',
     'energy',
     'activities',
   ]);
   fs.writeFileSync('./data/dog-breeds.csv', csv, 'utf-8');
-};
-
-(async () => {
-  console.log('Launching headless Chromium browser...');
-  const browser = await puppeteer.launch();
-
-  await getCatBreeds(browser);
-  await getDogBreeds(browser);
-  process.exit();
 })();
